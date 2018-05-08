@@ -189,6 +189,7 @@
 #define	ESKY150_NRF24L01_INO
 #define	H8_3D_NRF24L01_INO
 #define CFLIE_NRF24L01_INO
+#define V761_NRF24L01_INO
 
 
 /**************************/

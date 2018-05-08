@@ -1156,6 +1156,12 @@ static void protocol_init()
 						remote_callback = cflie_callback;
 						break;
 				#endif
+        #if defined(V761_NRF24L01_INO)
+          case PROTO_V761:
+            next_callback=initV761();
+            remote_callback = V761_callback;
+            break;
+        #endif
 			#endif
 		}
 	}

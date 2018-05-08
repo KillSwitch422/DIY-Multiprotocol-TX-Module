@@ -65,6 +65,7 @@ enum PROTOCOLS
 	PROTO_H8_3D		= 36,	// =>NRF24L01
 	PROTO_CORONA	= 37,	// =>CC2500
 	PROTO_CFLIE     = 38,   // =>NRF24L01
+	PROTO_V761		= 39,	// =>NRF24L01
 };
 
 enum Flysky
