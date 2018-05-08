@@ -33,22 +33,13 @@ enum
     V761_DATA
    };
 
-// Channel 5 - Gyro mode is packet 5
-if(CH5_SW)		// Mode Expert Gyro off
-	flags = 0x0c;
-else
-	if(Channel_data[CH5] < CHANNEL_MIN_COMMAND)
-		flags = 0x0a;			// Biggner mode -Included for possible variation between bigginer mode and Midd, currently duplicate of midd mode
-	else
-		flags = 0x0a;			// Midd Mode ( Gyro on no rate limits)
-
 static void __attribute__((unused)) set_checksum()
     {
     uint8_t i;
     uint8_t checksum = packet[0];
     for(i=1; i<V761_PACKET_SIZE-2; i++)
         checksum += packet[i];
-    if(phase == BIND1) 
+    if(phase == V761_BIND1) 
 	{
         packet[6] = checksum ^ 0xff;
         packet[7] = packet[6];
@@ -61,21 +52,21 @@ static void __attribute__((unused)) set_checksum()
     }
 
 
-static void __attribute__((unused)) send_packet(uint8_t bind)
+static void __attribute__((unused)) V761_send_packet(uint8_t bind)
 {
 	if(bind)
-	{
-		packet[0] = txid[0];
-        	packet[1] = txid[1];
-        	packet[2] = txid[2];
-        	packet[3] = txid[3];
-        	packet[4] = rf_channels[1];
-        	packet[5] = rf_channels[2];
-        	if(phase == BIND2) 
+	        {
+		      packet[0] = rx_tx_addr[0];
+        	packet[1] = rx_tx_addr[1];
+        	packet[2] = rx_tx_addr[2];
+        	packet[3] = rx_tx_addr[3];
+        	packet[4] = hopping_frequency[1];
+        	packet[5] = hopping_frequency[2];
+        	if(phase == V761_BIND2) 
             		packet[6] = 0xf0; // ?
-	}
+	       }
 	else
-	{ 
+	      { 
         packet[0] = convert_channel_16b_limit(THROTTLE,0,0xff); // throttle       
         packet[1] = convert_channel_16b_limit(RUDDER, 0, 0x7f); // rudder
         packet[2] = convert_channel_16b_limit(ELEVATOR, 0, 0x7f); // elevator
@@ -87,12 +78,20 @@ static void __attribute__((unused)) send_packet(uint8_t bind)
 	//packet counter
         if(packet_counter >= 12)
             packet_counter = 0;
-        NRF24L01_WriteReg(NRF24L01_05_RF_CH, V761_rf_channels[rf_chan++]);  //unsure of this command execution to implement the channel hop( taken from gobish original)
-        if(rf_chan >= V761_RF_NUM_CHANNELS)
-            rf_chan = 0;
-    	}
-
-	set_checksum()
+        NRF24L01_WriteReg(NRF24L01_05_RF_CH, hopping_frequency[hopping_frequency_no++]);  //unsure of this command execution to implement the channel hop( taken from gobish original)
+        if(hopping_frequency_no >= V761_RF_NUM_CHANNELS)
+            hopping_frequency_no = 0;
+    	 }
+// Channel 5 - Gyro mode is packet 5
+        if(CH5_SW)    // Mode Expert Gyro off
+          flags = 0x0c;
+        else
+          if(Channel_data[CH5] < CHANNEL_MIN_COMMAND)
+            flags = 0x0a;     // Biggner mode -Included for possible variation between bigginer mode and Midd, currently duplicate of midd mode
+          else
+            flags = 0x0a;     // Midd Mode ( Gyro on no rate limits)
+    
+	    set_checksum();
     	// Power on, TX mode, 2byte CRC
     	XN297_Configure(BV(NRF24L01_00_EN_CRC) | BV(NRF24L01_00_CRCO) | BV(NRF24L01_00_PWR_UP));
     	NRF24L01_WriteReg(NRF24L01_07_STATUS, 0x70); // flush interrupts
@@ -101,7 +100,7 @@ static void __attribute__((unused)) send_packet(uint8_t bind)
     	XN297_WritePayload(packet, V761_PACKET_SIZE);
 }
 
-static __attribute__((unused)) V761_init(
+static void __attribute__((unused)) V761_init()
 {
     NRF24L01_Initialize();
     NRF24L01_SetTxRxMode(TX_EN);
@@ -129,40 +128,39 @@ uint16_t V761_callback()
 	{
 		case V761_BIND1:
 			bind_counter--;
-            		packet_counter ++;
-           		NRF24L01_WriteReg(NRF24L01_05_RF_CH, V761_BIND_FREQ);
+      packet_counter ++;
+      NRF24L01_WriteReg(NRF24L01_05_RF_CH, V761_BIND_FREQ);
 			XN297_SetTXAddr((uint8_t*)"\x34\x43\x10\x10", 4);
-            		send_packet();
-           		if(packet_counter >= 20) 
+      V761_send_packet(0);
+      if(packet_counter >= 20) 
 				{
-                		packet_counter = 0;
-                		phase = V761_BIND2;
-            			}
-            		return 15730;
-            		break;
+        packet_counter = 0;
+        phase = V761_BIND2;
+        }
+      return 15730;
+      break;
 
-		case GW008_BIND2:
+		case V761_BIND2:
 			// switch to RX mode
 			bind_counter--;
-           		packet_counter ++;
-            		NRF24L01_WriteReg(NRF24L01_05_RF_CH, rf_channels[0]);
-            		XN297_SetTXAddr(txid, 4);
-            		send_packet();
-            		if(bind_counter <= 0) 
+      packet_counter ++;
+      NRF24L01_WriteReg(NRF24L01_05_RF_CH, hopping_frequency[0]);
+      XN297_SetTXAddr(rx_tx_addr, 4);
+      V761_send_packet(0);
+      if(bind_counter <= 0) 
 				{
-                		packet_counter = 0;
-                		phase = V761_DATA;
-                		//PROTOCOL_SetBindState(0);
-                		return 15730;
-            			}
-            		if(packet_counter >= 20) 
-				{
-                		packet_counter = 0;
-                		phase = V761_BIND1;
-            			}
-            		return 15730;
-            		break;
-
+        packet_counter = 0;
+        phase = V761_DATA;
+        //PROTOCOL_SetBindState(0);
+        return 15730;
+        }
+        if(packet_counter >= 20) 
+				  {
+          packet_counter = 0;
+          phase = V761_BIND1;
+          }
+        return 15730;
+        break;
 			
 		case V761_DATA:
 			send_packet(0);
@@ -173,12 +171,12 @@ uint16_t V761_callback()
 
 static void __attribute__((unused)) V761_initialize_txid()
 	{
-    	// TODO: try arbitrary txid & frequencies (except rf_channels[0])
-	memcpy(txid,(uint8_t *)"\x6f\x2c\xb1\x93",4);
-	memcpy(rf_channels,(uint8_t *)"\x14\x1e\x4b",3);
-       	//rf_channels[0] = 0x14; // not sure if this one is const or calculated ...
-    	//rf_channels[1] = 0x1e;
-    	//rf_channels[2] = 0x4b;
+    	// TODO: try arbitrary rx_tx_addr & frequencies (except hopping_frequency[0])
+	memcpy(rx_tx_addr,(uint8_t *)"\x6f\x2c\xb1\x93",4);
+	memcpy(hopping_frequency,(uint8_t *)"\x14\x1e\x4b",3);
+       	//hopping_frequency[0] = 0x14; // not sure if this one is const or calculated ...
+    	//hopping_frequency[1] = 0x1e;
+    	//hopping_frequency[2] = 0x4b;
 	}
 
 uint16_t initV761(void)
@@ -188,7 +186,7 @@ uint16_t initV761(void)
 	V761_initialize_txid();
 	phase = V761_BIND1;
 	V761_init();
-	rf_chan = 0
+	hopping_frequency_no = 0;
 	return	V761_INITIAL_WAIT;
 	}
 
