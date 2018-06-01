@@ -78,7 +78,7 @@ static void __attribute__((unused)) V761_send_packet(uint8_t bind)
           flags = 0x0c;
         else
           if(Channel_data[CH5] < CHANNEL_MIN_COMMAND)
-            flags = 0x0a;     // Biggner mode -Included for possible variation between bigginer mode and Midd, currently duplicate of midd mode
+            flags = 0x08;     // Biggner mode (Gyro on, yaw and pitch rate limited)
           else
             flags = 0x0a;     // Midd Mode ( Gyro on no rate limits)        
         
