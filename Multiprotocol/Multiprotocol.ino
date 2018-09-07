@@ -23,7 +23,7 @@
 #include <avr/pgmspace.h>
 
 //#define DEBUG_PIN		// Use pin TX for AVR and SPI_CS for STM32 => DEBUG_PIN_on, DEBUG_PIN_off, DEBUG_PIN_toggle
-// #define DEBUG_SERIAL	// Only for STM32_BOARD compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
+//#define DEBUG_SERIAL	// Only for STM32_BOARD compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
 
 #ifdef __arm__			// Let's automatically select the board if arm is selected
 	#define STM32_BOARD
@@ -55,6 +55,11 @@
 	#include <SPI.h>
 	#include <EEPROM.h>	
 	HardwareTimer HWTimer2(2);
+#if defined  SPORT_POLLING
+#ifdef INVERT_TELEMETRY
+	HardwareTimer HWTimer4(4);
+#endif
+#endif
 	void PPM_decode();
 	void ISR_COMPB();
 	extern "C"
@@ -103,10 +108,9 @@ uint16_t crc;
 uint8_t  crc8;
 uint16_t seed;
 uint16_t failsafe_count;
-//
 uint16_t state;
 uint8_t  len;
-uint8_t  RX_num;
+uint32_t radio_id;
 
 #if defined(FRSKYX_CC2500_INO) || defined(SFHSS_CC2500_INO)
 	uint8_t calData[48];
@@ -152,6 +156,7 @@ uint8_t option;
 uint8_t cur_protocol[3];
 uint8_t prev_option;
 uint8_t prev_power=0xFD; // unused power value
+uint8_t  RX_num;
 
 //Serial RX variables
 #define BAUD 100000
@@ -432,6 +437,11 @@ void setup()
 				option			=	FORCE_CORONA_TUNING;		// Use config-defined tuning value for CORONA
 			else
 		#endif
+		#if defined(FORCE_HITEC_TUNING) && defined(HITEC_CC2500_INO)
+			if (protocol==PROTO_HITEC)
+				option			=	FORCE_HITEC_TUNING;		// Use config-defined tuning value for HITEC
+			else
+		#endif
 				option			=	PPM_prot[line].option;	// Use radio-defined option value
 
 		if(PPM_prot[line].power)		POWER_FLAG_on;
@@ -605,7 +615,7 @@ uint8_t Update_All()
 	update_led_status();
 	#if defined(TELEMETRY)
 		#if ( !( defined(MULTI_TELEMETRY) || defined(MULTI_STATUS) ) )
-			if( (protocol==PROTO_FRSKYD) || (protocol==PROTO_BAYANG) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_FRSKYX) || (protocol==PROTO_DSM) || (protocol==PROTO_CABELL) )
+			if( (protocol==PROTO_FRSKYD) || (protocol==PROTO_BAYANG) || (protocol==PROTO_BUGS) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_BUGS) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_FRSKYX) || (protocol==PROTO_DSM) || (protocol==PROTO_CABELL)  || (protocol==PROTO_HITEC))
 		#endif
 				TelemetryUpdate();
 	#endif
@@ -906,6 +916,13 @@ static void protocol_init()
 						remote_callback = ReadHubsan;
 						break;
 				#endif
+				#if defined(BUGS_A7105_INO)
+					case PROTO_BUGS:
+						PE1_off;	//antenna RF1
+						next_callback = initBUGS();
+						remote_callback = ReadBUGS;
+						break;
+				#endif
 			#endif
 			#ifdef CC2500_INSTALLED
 				#if defined(FRSKYD_CC2500_INO)
@@ -948,6 +965,14 @@ static void protocol_init()
 						remote_callback = ReadCORONA;
 						break;
 				#endif
+				#if defined(HITEC_CC2500_INO)
+					case PROTO_HITEC:
+						PE1_off;	//antenna RF2
+						PE2_on;
+						next_callback = initHITEC();
+						remote_callback = ReadHITEC;
+						break;
+				#endif
 			#endif
 			#ifdef CYRF6936_INSTALLED
 				#if defined(DSM_CYRF6936_INO)
@@ -955,6 +980,13 @@ static void protocol_init()
 						PE2_on;	//antenna RF4
 						next_callback = initDsm();
 						remote_callback = ReadDsm;
+						break;
+				#endif
+				#if defined(WFLY_CYRF6936_INO)
+					case PROTO_WFLY:
+						PE2_on;	//antenna RF4
+						next_callback = initWFLY();
+						remote_callback = ReadWFLY;
 						break;
 				#endif
 				#if defined(DEVO_CYRF6936_INO)
@@ -1197,6 +1229,13 @@ void update_serial_data()
 {
 	RX_DONOTUPDATE_on;
 	RX_FLAG_off;								//data is being processed
+	#ifdef SAMSON	// Extremely dangerous, do not enable this unless you know what you are doing...
+		if( rx_ok_buff[0]==0x55 && (rx_ok_buff[1]&0x1F)==PROTO_FRSKYD && rx_ok_buff[2]==0x7F && rx_ok_buff[24]==217 && rx_ok_buff[25]==202 )
+		{//proto==FRSKYD+sub==7+rx_num==7+CH15==73%+CH16==73%
+			rx_ok_buff[1]=(rx_ok_buff[1]&0xE0) | PROTO_FLYSKY;			// change the protocol to Flysky
+			memcpy((void*)(rx_ok_buff+4),(void*)(rx_ok_buff+4+11),11);	// reassign channels 9-16 to 1-8
+		}
+	#endif
 	if(rx_ok_buff[1]&0x20)						//check range
 		RANGE_FLAG_on;
 	else
@@ -1234,6 +1273,11 @@ void update_serial_data()
 	#if defined(FORCE_CORONA_TUNING) && defined(CORONA_CC2500_INO)
 		if (protocol==PROTO_CORONA)
 			option=FORCE_CORONA_TUNING;	// Use config-defined tuning value for CORONA
+		else
+	#endif
+	#if defined(FORCE_HITEC_TUNING) && defined(HITEC_CC2500_INO)
+		if (protocol==PROTO_HITEC)
+			option=FORCE_HITEC_TUNING;	// Use config-defined tuning value for HITEC
 		else
 	#endif
 			option=rx_ok_buff[3];		// Use radio-defined option value
@@ -1539,7 +1583,7 @@ void pollBoot()
 #if defined(TELEMETRY)
 void PPM_Telemetry_serial_init()
 {
-	if( (protocol==PROTO_FRSKYD) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_BAYANG) || (protocol==PROTO_CABELL) )
+	if( (protocol==PROTO_FRSKYD) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_BAYANG) || (protocol==PROTO_CABELL)  || (protocol==PROTO_HITEC) || (protocol==PROTO_BUGS))
 		initTXSerial( SPEED_9600 ) ;
 	if(protocol==PROTO_FRSKYX)
 		initTXSerial( SPEED_57600 ) ;
@@ -1571,21 +1615,25 @@ static uint32_t random_id(uint16_t address, uint8_t create_new)
 				id|=eeprom_read_byte((EE_ADDR)address+i-1);
 			}
 			if(id!=0x2AD141A7)	//ID with seed=0
+			{
+				debugln("Read ID from EEPROM");
 				return id;
+			}
 		}
 		// Generate a random ID
 		#if defined STM32_BOARD
 			#define STM32_UUID ((uint32_t *)0x1FFFF7E8)
 			if (!create_new)
+			{
 				id = STM32_UUID[0] ^ STM32_UUID[1] ^ STM32_UUID[2];
-		#else
-			id = random(0xfefefefe) + ((uint32_t)random(0xfefefefe) << 16);
+				debugln("Generated ID from STM32 UUID");
+			}
+			else
 		#endif
+				id = random(0xfefefefe) + ((uint32_t)random(0xfefefefe) << 16);
+
 		for(uint8_t i=0;i<4;i++)
-		{
-			eeprom_write_byte((EE_ADDR)address+i,id);
-			id>>=8;
-		}
+			eeprom_write_byte((EE_ADDR)address+i,id >> (i*8));
 		eeprom_write_byte((EE_ADDR)(address+10),0xf0);//write bind flag in eeprom.
 		return id;
 	#else

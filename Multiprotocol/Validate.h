@@ -13,7 +13,7 @@
 #endif
 #if defined (STM32_BOARD) && not defined (ORANGE_TX)
 	//STM32
-	#if not defined(ARDUINO_GENERIC_STM32F103C) && not defined(ARDUINO_MULTI_STM32_FLASH_FROM_TX) && not defined(ARDUINO_MULTI_STM32_NO_BOOT)
+	#if not defined(ARDUINO_GENERIC_STM32F103C) && not defined(ARDUINO_MULTI_STM32_FLASH_FROM_TX) && not defined(ARDUINO_MULTI_STM32_NO_BOOT) && not defined(ARDUINO_MULTI_STM32_WITH_BOOT)
 		#error You must select one of these boards: "Multi 4-in-1 (STM32F103CB)" or "Generic STM32F103C series"
 	#endif
 #endif
@@ -31,7 +31,7 @@
 	#error You need to update your Multi 4-in-1 board definition.  Open Boards Manager and update to the latest version of the Multi 4-in-1 AVR Boards.
 #endif
 //STM32
-#if (defined(ARDUINO_MULTI_STM32_NO_BOOT) && ARDUINO_MULTI_STM32_NO_BOOT < MIN_STM32_BOARD) || (defined(ARDUINO_MULTI_STM32_FLASH_FROM_TX) && ARDUINO_MULTI_STM32_FLASH_FROM_TX < MIN_STM32_BOARD)
+#if (defined(ARDUINO_MULTI_STM32_NO_BOOT) && ARDUINO_MULTI_STM32_NO_BOOT < MIN_STM32_BOARD) || (defined(ARDUINO_MULTI_STM32_FLASH_FROM_TX) && ARDUINO_MULTI_STM32_FLASH_FROM_TX < MIN_STM32_BOARD) || (defined(ARDUINO_MULTI_STM32_WITH_BOOT) && ARDUINO_MULTI_STM32_WITH_BOOT < MIN_STM32_BOARD)
 	#error You need to update your Multi 4-in-1 board definition.  Open Boards Manager and update to the latest version of the Multi 4-in-1 STM32 Board.
 #endif
 
@@ -87,6 +87,11 @@
 		#error "The CORONA forced frequency tuning value is outside of the range -127..127."
 	#endif
 #endif
+#ifdef FORCE_HITEC_TUNING
+	#if ( FORCE_HITEC_TUNING < -127 ) || ( FORCE_HITEC_TUNING > 127 )
+		#error "The HITEC forced frequency tuning value is outside of the range -127..127."
+	#endif
+#endif
 #ifdef FORCE_FLYSKY_TUNING
 	#if ( FORCE_FLYSKY_TUNING < -300 ) || ( FORCE_FLYSKY_TUNING > 300 )
 		#error "The Flysky forced frequency tuning value is outside of the range -300..300."
@@ -133,11 +138,13 @@
 	#undef FLYSKY_A7105_INO
 	#undef HUBSAN_A7105_INO
 	#undef AFHDS2A_A7105_INO
+	#undef BUGS_A7105_INO
 #endif
 #ifndef CYRF6936_INSTALLED
 	#undef	DEVO_CYRF6936_INO
 	#undef	DSM_CYRF6936_INO
 	#undef	J6PRO_CYRF6936_INO
+	#undef	WFLY_CYRF6936_INO
 	#undef	WK2x01_CYRF6936_INO
 #endif
 #ifndef CC2500_INSTALLED
@@ -146,6 +153,7 @@
 	#undef	FRSKYX_CC2500_INO
 	#undef	SFHSS_CC2500_INO
 	#undef	CORONA_CC2500_INO
+	#undef	HITEC_CC2500_INO
 #endif
 #ifndef NRF24L01_INSTALLED
 	#undef	BAYANG_NRF24L01_INO
@@ -179,11 +187,15 @@
 	#undef INVERT_TELEMETRY
 	#undef AFHDS2A_FW_TELEMETRY
 	#undef AFHDS2A_HUB_TELEMETRY
+	#undef HITEC_FW_TELEMETRY
+	#undef HITEC_HUB_TELEMETRY
 	#undef BAYANG_HUB_TELEMETRY
 	#undef CABELL_HUB_TELEMETRY
 	#undef HUBSAN_HUB_TELEMETRY
+	#undef BUGS_HUB_TELEMETRY
 	#undef HUB_TELEMETRY
 	#undef SPORT_TELEMETRY
+	#undef SPORT_POLLING
 	#undef DSM_TELEMETRY
 	#undef MULTI_STATUS
 	#undef MULTI_TELEMETRY
@@ -204,23 +216,31 @@
 		#undef 	AFHDS2A_HUB_TELEMETRY
 		#undef 	AFHDS2A_FW_TELEMETRY
 	#endif
+	#if not defined(HITEC_CC2500_INO)
+		#undef 	HITEC_HUB_TELEMETRY
+		#undef 	HITEC_FW_TELEMETRY
+	#endif
 	#if not defined(FRSKYD_CC2500_INO)
 		#undef HUB_TELEMETRY
 	#endif
 	#if not defined(FRSKYX_CC2500_INO)
 		#undef SPORT_TELEMETRY
+		#undef SPORT_POLLING
+	#endif
+	#if not defined (SPORT_TELEMETRY) || not defined (STM32_BOARD)
+		#undef SPORT_POLLING
+	#endif
+	#if defined SPORT_POLLING && not defined INVERT_TELEMETRY
+		#error SPORT_POLLING has been defined but not INVERT_TELEMETRY. They should be both enabled to work.
 	#endif
 	#if not defined(DSM_CYRF6936_INO)
 		#undef DSM_TELEMETRY
 	#endif
-	#if not defined(DSM_TELEMETRY) && not defined(SPORT_TELEMETRY) && not defined(HUB_TELEMETRY) && not defined(HUBSAN_HUB_TELEMETRY) && not defined(BAYANG_HUB_TELEMETRY) && not defined(CABELL_HUB_TELEMETRY) && not defined(AFHDS2A_HUB_TELEMETRY) && not defined(AFHDS2A_FW_TELEMETRY) && not defined(MULTI_TELEMETRY) && not defined(MULTI_STATUS)
+	#if not defined(DSM_TELEMETRY) && not defined(SPORT_TELEMETRY) && not defined(HUB_TELEMETRY) && not defined(HUBSAN_HUB_TELEMETRY) && not defined(BUGS_HUB_TELEMETRY) && not defined(BAYANG_HUB_TELEMETRY) && not defined(CABELL_HUB_TELEMETRY) && not defined(AFHDS2A_HUB_TELEMETRY) && not defined(AFHDS2A_FW_TELEMETRY) && not defined(MULTI_TELEMETRY) && not defined(MULTI_STATUS) && not defined(HITEC_HUB_TELEMETRY) && not defined(HITEC_FW_TELEMETRY)
 		#undef TELEMETRY
 		#undef INVERT_TELEMETRY
+		#undef SPORT_POLLING
 	#endif
-#endif
-
-#if not defined (SPORT_TELEMETRY) || not defined (STM32_BOARD)
-	#undef SPORT_POLLING
 #endif
 
 //Make sure TX is defined correctly

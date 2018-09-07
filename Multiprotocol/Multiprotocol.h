@@ -19,7 +19,7 @@
 #define VERSION_MAJOR		1
 #define VERSION_MINOR		2
 #define VERSION_REVISION	0
-#define VERSION_PATCH_LEVEL	20
+#define VERSION_PATCH_LEVEL	42
 
 //******************
 // Protocols
@@ -65,7 +65,10 @@ enum PROTOCOLS
 	PROTO_H8_3D		= 36,	// =>NRF24L01
 	PROTO_CORONA	= 37,	// =>CC2500
 	PROTO_CFLIE     = 38,   // =>NRF24L01
-	PROTO_V761		= 39,	// =>NRF24L01
+	PROTO_HITEC     = 39,   // =>CC2500
+	PROTO_WFLY		= 40,	// =>CYRF6936
+	PROTO_BUGS		= 41,	// =>A7105
+  PROTO_V761    = 42, // =>NRF24L01
 };
 
 enum Flysky
@@ -74,7 +77,7 @@ enum Flysky
 	V9X9	= 1,
 	V6X6	= 2,
 	V912	= 3,
-	CX20	= 4
+	CX20	= 4,
 };
 enum Hubsan
 {
@@ -92,7 +95,7 @@ enum AFHDS2A
 enum Hisky
 {
 	Hisky	= 0,
-	HK310	= 1
+	HK310	= 1,
 };
 enum DSM
 {
@@ -100,7 +103,7 @@ enum DSM
 	DSM2_11	= 1,
 	DSMX_22	= 2,
 	DSMX_11	= 3,
-	DSM_AUTO = 4
+	DSM_AUTO = 4,
 };
 enum YD717
 {       			
@@ -108,22 +111,23 @@ enum YD717
 	SKYWLKR	= 1,
 	SYMAX4	= 2,
 	XINXUN	= 3,
-	NIHUI	= 4
+	NIHUI	= 4,
 };
 enum KN
 {
 	WLTOYS	= 0,
-	FEILUN	= 1
+	FEILUN	= 1,
 };
 enum SYMAX
 {
 	SYMAX	= 0,
-	SYMAX5C	= 1
+	SYMAX5C	= 1,
 };
 enum SLT
 {
-	SLT		= 0,
-	VISTA	= 1
+	SLT_V1	= 0,
+	SLT_V2	= 1,
+	Q200	= 2,
 };
 enum CX10
 {
@@ -161,7 +165,7 @@ enum MT99XX
 	H7		= 1,
 	YZ		= 2,
 	LS		= 3,
-	FY805	= 4
+	FY805	= 4,
 };
 enum MJXQ
 {
@@ -183,8 +187,8 @@ enum HONTAI
 {
 	HONTAI	= 0,
 	JJRCX1	= 1,
-	X5C1		= 2,
-	FQ777_951 =3
+	X5C1	= 2,
+	FQ777_951 =3,
 };
 enum V2X2
 {
@@ -230,6 +234,13 @@ enum CORONA
 {
 	COR_V1	= 0,
 	COR_V2	= 1,
+	FD_V3	= 2,
+};
+enum HITEC
+{
+	OPT_FW	= 0,
+	OPT_HUB	= 1,
+	MINIMA	= 2,
 };
 
 #define NONE 		0
@@ -261,6 +272,7 @@ enum MultiPacketTypes
 	MULTI_TELEMETRY_CONFIG			= 7,
 	MULTI_TELEMETRY_SYNC			= 8,
 	MULTI_TELEMETRY_SPORT_POLLING	= 9,
+	MULTI_TELEMETRY_HITEC			= 10,
 };
 
 // Macros
@@ -501,9 +513,10 @@ enum {
 #define EEPROM_ID_OFFSET		10		// Module ID (4 bytes)
 #define EEPROM_BANK_OFFSET		15		// Current bank number (1 byte)
 #define EEPROM_ID_VALID_OFFSET	20		// 1 byte flag that ID is valid
-#define MODELMODE_EEPROM_OFFSET	30		// Autobind mode, 1 byte per model, end is 46
-#define AFHDS2A_EEPROM_OFFSET	50		// RX ID, 4 byte per model id, end is 114
-#define CONFIG_EEPROM_OFFSET 	120		// Current configuration of the multimodule
+#define MODELMODE_EEPROM_OFFSET	30		// Autobind mode, 1 byte per model, end is 30+16=46
+#define AFHDS2A_EEPROM_OFFSET	50		// RX ID, 4 byte per model id, end is 50+64=114
+#define BUGS_EEPROM_OFFSET		114		// RX ID, 4 byte per model id, end is 114+64=178
+//#define CONFIG_EEPROM_OFFSET 	178		// Current configuration of the multimodule
 
 //****************************************
 //*** MULTI protocol serial definition ***
@@ -560,6 +573,9 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
 					H8_3D		36
 					CORONA		37
 					CFlie		38
+					Hitec		39
+					WFLY		40
+					BUGS		41
    BindBit=>		0x80	1=Bind/0=No
    AutoBindBit=>	0x40	1=Yes /0=No
    RangeCheck=>		0x20	1=Yes /0=No
@@ -679,6 +695,15 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
 		sub_protocol==CORONA
 			COR_V1		0
 			COR_V2		1
+			FD_V3		2
+		sub_protocol==HITEC
+			OPT_FW		0
+			OPT_HUB		1
+			MINIMA		2
+		sub_protocol==SLT
+			SLT_V1		0
+			SLT_V2		1
+			Q200		2
 
    Power value => 0x80	0=High/1=Low
   Stream[3]   = option_protocol;
@@ -765,7 +790,7 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
 
 
   Type 0x04 Spektrum telemetry data
-   data[0] RSSI
+   data[0] TX RSSI
    data[1-15] telemetry data
 
   Type 0x05 DSM bind data
@@ -778,5 +803,13 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
    length: 29
    data[0] = RSSI value
    data[1-28] telemetry data
+
+  Type 0x0A Hitec telemetry data
+   length: 8
+   data[0] = TX RSSI value
+   data[1] = TX LQI value
+   data[2] = frame number
+   data[3-7] telemetry data
+   Full description at the bottom of Hitec_cc2500.ino
 
 */

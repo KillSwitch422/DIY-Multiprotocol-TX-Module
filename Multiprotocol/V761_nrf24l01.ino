@@ -67,11 +67,11 @@ static void __attribute__((unused)) V761_send_packet(uint8_t bind)
 	        }
 	else
 	      { 
-        packet[0] = convert_channel_16b_limit(THROTTLE,0,0xff); // throttle       
-        packet[1] = convert_channel_16b_limit(RUDDER, 0, 0x7f); // rudder
-        packet[2] = convert_channel_16b_limit(ELEVATOR, 0, 0x7f); // elevator
-        packet[3] = 0x3f; // optional aileron channel for 4ch version?
-        packet[5] = (packet_count++ / 3) * 0x40;
+        packet[0] = convert_channel_8b(THROTTLE); // throttle       
+        packet[1] = convert_channel_8b(RUDDER)>>1; // rudder
+        packet[2] = convert_channel_8b(RUDDER)>>1; // elevator
+        packet[3] = 0x3f; // no functional implementation in this model, possibly optional aileron channel for 4ch version?
+        packet[5] = (packet_count++ / 3)<<6;
         packet[4] = (packet[5] == 0x40) ? 0x1a : 0x20;
 // Channel 5 - Gyro mode is packet 5
         if(CH5_SW)    // Mode Expert Gyro off
@@ -100,14 +100,13 @@ static void __attribute__((unused)) V761_send_packet(uint8_t bind)
     	NRF24L01_FlushTx();
     	// transmit packet
     	XN297_WritePayload(packet, V761_PACKET_SIZE);
+      NRF24L01_SetPower();
 }
 
 static void __attribute__((unused)) V761_init()
 {
     NRF24L01_Initialize();
     NRF24L01_SetTxRxMode(TX_EN);
-    
-  
     NRF24L01_FlushTx();
     NRF24L01_FlushRx();
     NRF24L01_WriteReg(NRF24L01_01_EN_AA, 0x00);		// No Auto Acknowldgement on all data pipes
@@ -129,7 +128,8 @@ uint16_t V761_callback()
 	switch(phase)
 	{
 		case V761_BIND1:
-			bind_counter--;
+			if(bind_counter) 
+			  bind_counter--;
       packet_count ++;
       NRF24L01_WriteReg(NRF24L01_05_RF_CH, V761_BIND_FREQ);
 			XN297_SetTXAddr((uint8_t*)"\x34\x43\x10\x10", 4);
@@ -139,7 +139,7 @@ uint16_t V761_callback()
         packet_count = 0;
         phase = V761_BIND2;
         }
-      return 50;
+      return 15730;
       break;
 
 		case V761_BIND2:
@@ -155,14 +155,14 @@ uint16_t V761_callback()
         phase = V761_DATA;
         BIND_DONE;
         //PROTOCOL_SetBindState(0);
-        return 50;
+        return 15730;
         }
         if(packet_count >= 20) 
 				  {
           packet_count = 0;
           phase = V761_BIND1;
           }
-        return 50;
+        return 15730;
         break;
 			
 		case V761_DATA:
@@ -175,11 +175,16 @@ uint16_t V761_callback()
 static void __attribute__((unused)) V761_initialize_txid()
 	{
     	// TODO: try arbitrary rx_tx_addr & frequencies (except hopping_frequency[0])
-	memcpy(rx_tx_addr,(uint8_t *)"\x6f\x2c\xb1\x93",4);
-	memcpy(hopping_frequency,(uint8_t *)"\x14\x1e\x4b",3);
-       	//hopping_frequency[0] = 0x14; // not sure if this one is const or calculated ...
-    	//hopping_frequency[1] = 0x1e;
-    	//hopping_frequency[2] = 0x4b;
+     // testing for random Rx_tx_address
+    memcpy(rx_tx_addr,(uint8_t *)"\x47\x93\x45\xD5",4); // random 4 bytes x47\x93\x45\xD5
+     //Actual rx_tx_addr from SPI grab)
+	    //memcpy(rx_tx_addr,(uint8_t *)"\x6f\x2c\xb1\x93",4);
+    memcpy(hopping_frequency,(uint8_t *)"\x14\x32\x46",3); // random 2 bytes for hopping_frequency[1] = 0x32 hopping_frequency[2] = 0x46;
+     //Actual hopping_frequency from SPI grab)
+	    //memcpy(hopping_frequency,(uint8_t *)"\x14\x1e\x4b",3);
+       	//hopping_frequency[0] = 0x14; // not sure if this one is const or calculated ... // combined into one memcopy
+    	//hopping_frequency[1] = 0x1e; //combined into one memcopy
+    	//hopping_frequency[2] = 0x4b; //combined into one memcopy
 	}
 
 uint16_t initV761(void)

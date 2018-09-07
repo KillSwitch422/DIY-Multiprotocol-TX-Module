@@ -89,8 +89,8 @@
 //#define ORANGE_TX_BLUE
 
 /** CC2500 Fine Frequency Tuning **/
-//For optimal performance the CC2500 RF module used by the FrSkyD, FrSkyV, FrSkyX, and SFHSS protocols needs to be tuned for each protocol.
-//Initial tuning should be done via the radio menu with a genuine FrSky or Futaba receiver.  
+//For optimal performance the CC2500 RF module used by the FrSkyD, FrSkyV, FrSkyX, SFHSS, CORONA and Hitec protocols needs to be tuned for each protocol.
+//Initial tuning should be done via the radio menu with a genuine FrSky/Futaba/CORONA/Hitec receiver.  
 //Once a good tuning value is found it can be set here and will override the radio's 'option' setting for all existing and new models which use that protocol.
 //For more information: https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/tree/master/docs/Frequency_Tuning.md
 //Uncomment the lines below (remove the "//") and set an appropriate value (replace the "0") to enable. Valid range is -127 to +127.
@@ -99,6 +99,7 @@
 //#define FORCE_FRSKYX_TUNING	0
 //#define FORCE_SFHSS_TUNING	0
 //#define FORCE_CORONA_TUNING	0
+//#define FORCE_HITEC_TUNING	0
 
 /** A7105 Fine Frequency Tuning **/
 //This is required in rare cases where some A7105 modules and/or RXs have an inaccurate crystal oscillator.
@@ -111,6 +112,7 @@
 //#define FORCE_FLYSKY_TUNING	0
 //#define FORCE_HUBSAN_TUNING	0
 //#define FORCE_AFHDS2A_TUNING	0
+//#define FORCE_BUGS_TUNING	0
 
 /** Low Power **/
 //Low power is reducing the transmit power of the multi module. This setting is configurable per model in PPM (table below) or Serial mode (radio GUI).
@@ -147,48 +149,51 @@
 //Comment the protocols you are not using with "//" to save Flash space.
 
 //The protocols below need an A7105 to be installed
+#define	AFHDS2A_A7105_INO
 #define	FLYSKY_A7105_INO
 //#define	HUBSAN_A7105_INO
-#define	AFHDS2A_A7105_INO
+//#define	BUGS_A7105_INO
 
 //The protocols below need a CYRF6936 to be installed
 //#define	DEVO_CYRF6936_INO
 #define	DSM_CYRF6936_INO
-#define	J6PRO_CYRF6936_INO
+//#define	J6PRO_CYRF6936_INO
+//#define	WFLY_CYRF6936_INO
 //#define	WK2x01_CYRF6936_INO
 
 //The protocols below need a CC2500 to be installed
-//#define	FRSKYV_CC2500_INO
-//#define	FRSKYD_CC2500_INO
-//#define	FRSKYX_CC2500_INO
-#define	SFHSS_CC2500_INO
 //#define	CORONA_CC2500_INO
+//#define	FRSKYD_CC2500_INO
+//#define	FRSKYV_CC2500_INO
+//#define	FRSKYX_CC2500_INO
+#define	HITEC_CC2500_INO
+#define	SFHSS_CC2500_INO
 
 //The protocols below need a NRF24L01 to be installed
+//#define	ASSAN_NRF24L01_INO
 #define	BAYANG_NRF24L01_INO
-#define	CG023_NRF24L01_INO
-#define	CX10_NRF24L01_INO		// Include Q2X2 protocol
+#define	CABELL_NRF24L01_INO
+//#define	CFLIE_NRF24L01_INO
+//#define	CG023_NRF24L01_INO
+//#define	CX10_NRF24L01_INO		// Include Q2X2 protocol
+//#define	DM002_NRF24L01_INO
 //#define	ESKY_NRF24L01_INO
+//#define	ESKY150_NRF24L01_INO
+//#define	FQ777_NRF24L01_INO
+//#define	FY326_NRF24L01_INO
+//#define	GW008_NRF24L01_INO
 //#define	HISKY_NRF24L01_INO
+//#define	HONTAI_NRF24L01_INO
+#define	H8_3D_NRF24L01_INO
 //#define	KN_NRF24L01_INO
-//#define	SLT_NRF24L01_INO
+#define	MJXQ_NRF24L01_INO
+#define	MT99XX_NRF24L01_INO
+//#define	Q303_NRF24L01_INO
+//#define	SHENQI_NRF24L01_INO
+#define	SLT_NRF24L01_INO
 #define	SYMAX_NRF24L01_INO
 #define	V2X2_NRF24L01_INO
-#define	YD717_NRF24L01_INO
-#define	MT99XX_NRF24L01_INO
-#define	MJXQ_NRF24L01_INO
-//#define	SHENQI_NRF24L01_INO
-//#define	FY326_NRF24L01_INO
-//#define	FQ777_NRF24L01_INO
-//#define	ASSAN_NRF24L01_INO
-//#define	HONTAI_NRF24L01_INO
-//#define	Q303_NRF24L01_INO
-//#define	GW008_NRF24L01_INO
-//#define	DM002_NRF24L01_INO
-//#define	CABELL_NRF24L01_INO
-//#define	ESKY150_NRF24L01_INO
-//#define	H8_3D_NRF24L01_INO
-//#define CFLIE_NRF24L01_INO
+//#define	YD717_NRF24L01_INO
 #define V761_NRF24L01_INO
 
 
@@ -232,26 +237,28 @@
 
 //Comment if you don't want to send Multi status telemetry frames (Protocol available, Bind in progress, version...)
 //Use with er9x/erksy9x, for OpenTX MULTI_TELEMETRY below is preferred instead
-#define MULTI_STATUS
+//#define MULTI_STATUS
 
 //Uncomment to send Multi status and allow OpenTX to autodetect the telemetry format
 //Supported by OpenTX version 2.2 RC9 and newer. NOT supported by er9x/ersky9x use MULTI_STATUS instead.
-//#define MULTI_TELEMETRY
+#define MULTI_TELEMETRY
 
 //Comment a line to disable a specific protocol telemetry
-#define DSM_TELEMETRY				// Forward received telemetry packet directly to TX to be decoded
+#define DSM_TELEMETRY				// Forward received telemetry packet directly to TX to be decoded by er9x, ersky9x and OpenTX
 #define SPORT_TELEMETRY				// Use FrSkyX SPORT format to send telemetry to TX
-#define AFHDS2A_FW_TELEMETRY		// Forward received telemetry packet directly to TX to be decoded
+#define AFHDS2A_FW_TELEMETRY		// Forward received telemetry packet directly to TX to be decoded by ersky9x and OpenTX
+#define AFHDS2A_HUB_TELEMETRY		// Use FrSkyD Hub format to send basic telemetry to TX like er9x
 #define HUB_TELEMETRY				// Use FrSkyD Hub format to send telemetry to TX
-#define AFHDS2A_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
 #define BAYANG_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
+#define BUGS_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
 #define HUBSAN_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
 #define CABELL_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
+#define HITEC_HUB_TELEMETRY			// Use FrSkyD Hub format to send basic telemetry to the radios which can decode it like er9x, ersky9x and OpenTX
+#define HITEC_FW_TELEMETRY			// Under development: Forward received telemetry packets to be decoded by ersky9x and OpenTX
 
 //SPORT_POLLING is an implementation of the same polling routine as XJT module for sport telemetry bidirectional communication.
 //This is useful for passing sport control frames from TX to RX(ex: changing Betaflight PID or VTX channels on the fly using LUA scripts with OpentX).
-//Using this feature on turnigy 9XR_PRO requires uncomment INVERT_TELEMETRY as this TX output on telemetry pin only inverted signal.
-//!This is a work in progress!
+//Using this feature requires to uncomment INVERT_TELEMETRY as this TX output on telemetry pin only inverted signal.
 //#define SPORT_POLLING
 
 
@@ -271,7 +278,7 @@
 /*************************/
 //In this section you can configure all details about PPM.
 //If you do not plan to use the PPM mode comment this line using "//" to save Flash space, you don't need to configure anything below in this case
-#define ENABLE_PPM
+//#define ENABLE_PPM
 
 /** TX END POINTS **/
 //It is important for the module to know the endpoints of your radio.
@@ -545,8 +552,22 @@ const PPM_Parameters PPM_prot[14*NBR_BANKS]=	{
 	PROTO_CORONA
 		COR_V1
 		COR_V2
+		FD_V3
 	PROTO_CFLIE
 		NONE
+	PROTO_HITEC
+		OPT_FW
+		OPT_HUB
+		MINIMA
+	PROTO_WFLY
+		NONE
+	PROTO_BUGS
+		NONE
+	PROTO_SLT
+		SLT_V1
+		SLT_V2
+		Q200
+  PROTO_V761
 */
 
 // RX_Num is used for TX & RX match. Using different RX_Num values for each receiver will prevent starting a model with the false config loaded...
